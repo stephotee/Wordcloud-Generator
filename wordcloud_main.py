@@ -8,7 +8,6 @@ import nltk
 import io
 from PIL import Image
 import base64
-import os
 
 # Download NLTK resources
 nltk.download('punkt')
@@ -29,16 +28,20 @@ def get_image_download_link(img, filename, text):
     href = f'<a href="data:image/png;base64,{img_str}" download="{filename}">{text}</a>'
     return href
 
-# Function to check font availability
-def font_path():
-    if os.path.exists('Trebuchet MS'):
-        return 'Trebuchet MS'
-    else:
-        # Use a default font if Trebuchet MS is not available
-        return None
-
 # Streamlit app title
 st.title("Word Cloud Generator")
+
+# Custom CSS to set the background color to white
+st.markdown(
+    """
+    <style>
+    .reportview-container {
+        background-color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # Text input
 text_input = st.text_area("Enter text (comma separated)", "")
@@ -64,7 +67,7 @@ if st.button("Generate Word Cloud"):
         processed_text = process_text(text_input)
 
     if processed_text:
-        wordcloud = WordCloud(width=800, height=400, max_font_size=75, max_words=50, font_path=font_path(), color_func=lambda *args, **kwargs: 'black').generate(processed_text)
+        wordcloud = WordCloud(width=800, height=400, max_font_size=75, max_words=50, background_color='white').generate(processed_text)
         plt.figure(figsize=(10, 5))
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")
