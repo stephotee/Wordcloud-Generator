@@ -53,4 +53,29 @@ processed_text = ""
 if st.button("Generate Word Cloud"):
     if uploaded_file is not None:
         if uploaded_file.type == "text/csv":
-            df = pd.read_csv(uploaded
+            df = pd.read_csv(uploaded_file)
+            text = ' '.join(row[0] for row in df.values)
+        else:
+            text = str(uploaded_file.read(), 'utf-8')
+
+        processed_text = process_text(text)
+
+    elif text_input:
+        processed_text = process_text(text_input)
+
+    if processed_text:
+        wordcloud = WordCloud(width=800, height=400, max_font_size=75, max_words=50, font_path=font_path(), color_func=lambda *args, **kwargs: 'black').generate(processed_text)
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        st.pyplot(plt)
+
+        # Convert plot to PNG image
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format='png')
+        img_buf.seek(0)
+        st.markdown(get_image_download_link(Image.open(img_buf), 'wordcloud.png', 'Download Word Cloud as PNG'), unsafe_allow_html=True)
+
+# Restart button
+if st.button("Create another word cloud"):
+    st.experimental_rerun()
