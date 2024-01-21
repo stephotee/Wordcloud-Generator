@@ -37,16 +37,19 @@ if 'color_profile' not in st.session_state:
 st.title('Word Cloud Generator')
 
 # Sidebar options
-st.sidebar.header("Options")
-text_input_method = st.sidebar.selectbox("Select input method", ["Type/Paste text", "Upload file"])
+additional_stopwords = st.sidebar.text_input("Additional stopwords (comma separated)")
 
-text = ""
-if text_input_method == "Type/Paste text":
-    text = st.sidebar.text_area("Enter text here:")
-elif text_input_method == "Upload file":
-    uploaded_file = st.sidebar.file_uploader("Upload your file", type=['txt', 'csv'])
-    if uploaded_file is not None:
-        # File processing logic
+grouping_counter = 1
+groupings = []
+# Custom word grouping
+if st.sidebar.button("Custom word grouping"):
+    grouping_counter += 1
+for _ in range(grouping_counter):
+    with st.sidebar:
+        group = st.text_input(f"Words to be grouped (Group {_})", "")
+        new_term = st.text_input(f"New term for group (To {_})", "")
+        if group and new_term:
+            groupings.append((group.split(','), new_term))
 
 additional_stopwords = st.sidebar.text_input("Additional stopwords (comma separated)")
 
