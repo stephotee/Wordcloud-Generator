@@ -1,38 +1,20 @@
 import streamlit as st
-from wordcloud import WordCloud
+from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
-from PIL import Image
-import numpy as np
+import pandas as pd
 from io import BytesIO
 import base64
 
-# Function to generate word cloud
-def generate_wordcloud(data, additional_stopwords, group_terms_mapping, color_scheme, max_words):
-    stopwords = set(STOPWORDS)
-    stopwords.update(additional_stopwords)
-    
-    # If grouping terms are provided, we process them here
-    if group_terms_mapping:
-        for term, group in group_terms_mapping.items():
-            data = data.replace(term, group)
-    
-    wordcloud = WordCloud(stopwords=stopwords,
-                          prefer_horizontal=1.0,
-                          width=800,
-                          height=400,
-                          background_color=color_scheme['background_color'],
-                          color_func=lambda *args, **kwargs: color_scheme['text_color'],
-                          max_words=max_words).generate(data)
-
-    return wordcloud
-
-# Function to decode the image and make it downloadable
-def get_image_download_link(img, filename, text):
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    href = f'<a href="data:image/png;base64,{img_str}" download="{filename}">{text}</a>'
-    return href
+# Function to generate and display word cloud
+def generate_wordcloud(text, max_words, color_func):
+    wordcloud = WordCloud(stopwords=STOPWORDS, max_words=max_words, background_color='white', 
+                          width=800, height=400, random_state=1, 
+                          color_func=color_func, normalize_plurals=False).generate(text)
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    st.pyplot()
 
 # Function to parse the group terms from the user input
 def parse_group_terms(group_terms_str):
@@ -43,55 +25,59 @@ def parse_group_terms(group_terms_str):
         terms = terms.strip('GROUP=("').split('", "')
         group_name = group_name.strip()
         for term in terms:
-            group_terms_mapping[term] = group_name
+            group_terms_mapping[term.lower()] = group_name.lower()
     return group_terms_mapping
 
-# UI for the app
+# Function to download the generated word cloud
+def get_image_download_link(img, filename, text):
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    href = f'<a href="data:image/png;base64,{img_str}" download="{filename}">{text}</a>'
+    return href
+
+# Streamlit UI
 st.title("Word Cloud Generator")
-st.sidebar.title("Settings")
 
-# Upload CSV file
-uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
+# Text input for direct text data
+text_data = st.text_area("Paste text data here")
+
+# File uploader for CSV or TXT
+uploaded_file = st.file_uploader("...or upload a CSV or TXT file instead", type=['csv', 'txt'])
 if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    text_column = st.sidebar.selectbox("Which column contains the text data?", data.columns)
-    data = data[text_column].dropna().astype(str)
+    if uploaded_file.type == "text/csv":
+        dataframe = pd.read_csv(uploaded_file)
+        text_column = st.selectbox("Which column contains the text data?", dataframe.columns)
+        text_data = ' '.join(dataframe[text_column].dropna().astype(str))
+    elif uploaded_file.type == "text/plain":
+        text_data = str(uploaded_file.read(), 'utf-8')
 
-# UI to add additional stopwords
-additional_stopwords = st.sidebar.text_area("Add stop words separated by commas", "").split(',')
+# Sidebar controls
+st.sidebar.header('Word Cloud Settings')
+max_words = st.sidebar.slider('Maximum number of words', min_value=5, max_value=100, value=50, step=5)
+color_scheme = st.sidebar.radio("Color scheme", ["Black and White", "Colorful"])
+additional_stopwords = st.sidebar.text_area("Enter stopwords separated by commas").split(',')
 
-# UI to group common terms
-group_terms_str = st.sidebar.text_area('Group common terms', 'GROUP=("term1", "term2") TO="group_name"')
+# Group common terms input
+group_terms_str = st.sidebar.text_area('Group common terms (syntax: GROUP=("term1", "term2") TO="group_name")')
 
-# UI for color scheme selection
-color_scheme_option = st.sidebar.radio(
-    "Select Color Scheme",
-    ('Black text, white background', 'White text, black background', 'Multi-color text, white background', 'Multi-color text, black background')
-)
-
-# Mapping color schemes to their respective settings
-color_schemes = {
-    'Black text, white background': {'text_color': '#000000', 'background_color': '#FFFFFF'},
-    'White text, black background': {'text_color': '#FFFFFF', 'background_color': '#000000'},
-    'Multi-color text, white background': {'text_color': None, 'background_color': '#FFFFFF'},
-    'Multi-color text, black background': {'text_color': None, 'background_color': '#000000'}
-}
-
-# Selecting the appropriate color scheme
-color_scheme = color_schemes[color_scheme_option]
-
-# UI for maximum words in the word cloud
-max_words = st.sidebar.slider("Max number of words", 5, 100, 5, 5)
-
-if st.button("Generate Word Cloud"):
+# Generate button
+if st.button('Generate Word Cloud'):
+    # Process group terms
     group_terms_mapping = parse_group_terms(group_terms_str)
-    wordcloud = generate_wordcloud(' '.join(data), additional_stopwords, group_terms_mapping, color_scheme, max_words)
-    plt.figure(figsize=(20,10))
-    plt.imshow(wordcloud, interpolation="bilinear")
-    plt.axis("off")
-    plt.show()
-    st.pyplot()
     
-    # Show download link
-    img = wordcloud.to_image()
-    st.markdown(get_image_download_link(img, "wordcloud.png", 'Download Wordcloud'), unsafe_allow_html=True)
+    # Apply grouping of terms
+    for original, new in group_terms_mapping.items():
+        text_data = text_data.replace(original, new)
+    
+    # Generate word cloud
+    if color_scheme == "Black and White":
+        color_func = lambda *args, **kwargs: "black"
+    else:
+        color_func = None  # Use default color scheme
+    
+    generate_wordcloud(text_data, max_words, color_func)
+
+    # Display download link
+    wordcloud_img = WordCloud().to_image()
+    st.markdown(get_image_download_link(wordcloud_img, 'your_wordcloud.png', 'Download Word Cloud'), unsafe_allow_html=True)
