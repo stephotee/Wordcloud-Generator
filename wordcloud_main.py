@@ -5,9 +5,13 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import pandas as pd
 from io import StringIO
+from PIL import Image
+import io
+import numpy as np
 import nltk
 nltk.download('stopwords')
 nltk.download('punkt')
+
 
 
 # Initialize NLTK stop words
@@ -95,12 +99,28 @@ if st.button('Start Over'):
     st.experimental_rerun()
 
 # Save the current word cloud as a PNG
-if st.button('Download PNG'):
-    wordcloud.to_file('wordcloud.png')
-    with open('wordcloud.png', 'rb') as file:
-        btn = st.download_button(
-            label="Download PNG",
-            data=file,
-            file_name="wordcloud.png",
-            mime="image/png"
-        )
+#if st.button('Download PNG'):
+#    wordcloud.to_file('wordcloud.png')
+#    with open('wordcloud.png', 'rb') as file:
+#        btn = st.download_button(
+#            label="Download PNG",
+#            data=file,
+#            file_name="wordcloud.png",
+#            mime="image/png"
+#        )
+
+# Function to save word cloud to a buffer
+def save_wordcloud(wordcloud):
+    img_buffer = io.BytesIO()
+    wordcloud.to_image().save(img_buffer, format='PNG')
+    img_buffer.seek(0)
+    return img_buffer
+
+# Download button logic
+def download_button(buffer, filename, button_text):
+    st.download_button(
+        label=button_text,
+        data=buffer,
+        file_name=filename,
+        mime='image/png'
+    )
