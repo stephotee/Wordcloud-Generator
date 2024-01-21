@@ -1,59 +1,71 @@
 import streamlit as st
-from wordcloud import WordCloud, STOPWORDS
+from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+from PIL import Image
 import numpy as np
-import io
+import pandas as pd
+from io import StringIO
+import base64
 
-# Function to choose color for the words
-def color_func(word, font_size, position, orientation, random_state=None, **kwargs):
-    if color_profile == "Multi-colour text, white background":
-        colors = ["#0F1035", "#365486", "#7FC7D9", "#DCF2F1"]
-    elif color_profile == "Multi-colour text, black background":
-        colors = ["#FC993C", "#FFE775", "#BD4682", "#8C2057"]
+# Function to process text and create a word cloud
+def process_text(file_buffer=None, manual_text_input=None):
+    # If a file is uploaded, process the file
+    if file_buffer is not None:
+        text = file_buffer.read().decode('utf-8')
     else:
-        colors = [text_color]
+        text = manual_text_input
 
-    return np.random.choice(colors)
+    # Remove stopwords
+    stopwords = set(STOPWORDS)
+    additional_stopwords = st.sidebar.text_area("Add stopwords", "Enter,words,here").split(',')
+    stopwords.update(additional_stopwords)
 
-# Function to generate and display word cloud
-def generate_word_cloud(text, max_words, color_profile, text_color, background_color, additional_stopwords):
-    wordcloud = WordCloud(width=800, height=400, max_words=max_words, 
-                          background_color=background_color,
-                          stopwords=STOPWORDS.union(set(additional_stopwords)),
-                          color_func=lambda *args, **kwargs: color_func(*args, **kwargs),
-                          prefer_horizontal=1.0).generate(text)
+    # Generate the word cloud
+    wordcloud = WordCloud(width=800, height=400, background_color='white', max_words=200, stopwords=stopwords, collocations=False).generate(text)
+    return wordcloud
 
-    # Display image
+# Function to handle grouping of common terms
+def group_terms(wordcloud, groupings):
+    for group in groupings:
+        target = group['TO']
+        for term in group['GROUP']:
+            wordcloud = wordcloud.rec_from_frequencies({target: wordcloud.words_.get(term, 0) + wordcloud.words_.get(target, 0)})
+            wordcloud.words_.pop(term, None)
+    return wordcloud
+
+# Function to display the word cloud
+def display_wordcloud(wordcloud):
+    plt.figure(figsize=(10, 5))
     plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis("off")
-    st.pyplot()
+    plt.axis('off')
+    plt.show()
 
-# Streamlit UI
-st.title("Word Cloud Generator")
+# Main app
+def main():
+    st.title('Word Cloud Generator')
+    
+    # Sidebar options
+    st.sidebar.title("Settings")
 
-# Text input
-user_input = st.text_area("Enter your text here:")
+    # Text input for manual data entry
+    text_input = st.text_area("Paste text data here:")
 
-# Word count slider
-max_words = st.slider("Max words in cloud", 5, 100, 50, 5)
+    # File uploader for CSV or TXT files
+    file_buffer = st.file_uploader("Or upload a CSV or TXT file:", type=['csv', 'txt'])
 
-# Color profile selection
-color_profiles = {
-    "Black text, white background": ("#000000", "#FFFFFF"),
-    "White text, black background": ("#FFFFFF", "#000000"),
-    "Multi-colour text, white background": ("", "#FFFFFF"),
-    "Multi-colour text, black background": ("", "#000000")
-}
+    # Add a button to generate word cloud
+    if st.button("Generate Word Cloud"):
+        # Process text input or file upload
+        wordcloud = process_text(file_buffer, text_input)
 
-color_profile = st.selectbox("Select Color Profile", list(color_profiles.keys()))
-text_color, background_color = color_profiles[color_profile]
+        # Group common terms if specified
+        groupings_str = st.sidebar.text_area("Group common terms", "GROUP=(\"term1\", \"term2\") TO=\"new_term\"")
+        if groupings_str:
+            groupings = eval('[' + groupings_str + ']')  # This is a simple method; in production, use a safer parsing method
+            wordcloud = group_terms(wordcloud, groupings)
 
-# Stopword input
-new_stopwords = [word.strip() for word in st.text_input("Enter words to exclude (separate with commas):").split(',')]
+        # Display the generated word cloud
+        display_wordcloud(wordcloud)
 
-# Generate word cloud button
-if st.button("Generate Word Cloud"):
-    if user_input:
-        generate_word_cloud(user_input, max_words, color_profile, text_color, background_color, new_stopwords)
-    else:
-        st.error("Please enter some text to generate a word cloud.")
+if __name__ == "__main__":
+    main()
