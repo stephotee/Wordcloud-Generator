@@ -22,11 +22,24 @@ def process_text(text, additional_stopwords):
     return " ".join([word for word in text.split() if word.lower() not in STOPWORDS])
 
 # Function to group common terms
-def group_terms(text, groupings):
-    for group in groupings:
-        target = groupings[group]
-        for term in group:
-            text = text.replace(term, target)
+def group_terms(text, group_input):
+    try:
+        # Splitting the input into GROUP and TO parts
+        group_part, to_part = group_input.split(' TO=')
+        group_terms = group_part.strip()[6:-1].split(',')
+        to_term = to_part.strip()[1:-1]
+
+        # Cleaning up terms
+        group_terms = [term.strip()[1:-1] for term in group_terms]
+        to_term = to_term.strip()
+
+        # Replacing group terms with to_term
+        for term in group_terms:
+            text = text.replace(term, to_term)
+    except Exception as e:
+        st.error(f"Error in grouping syntax: {e}")
+        return text
+
     return text
 
 # Initialize session state
@@ -75,8 +88,9 @@ if group_input:
 if st.button('Generate Word Cloud'):
     if text:
         processed_text = process_text(text, additional_stopwords)
-        if groupings:
-            processed_text = group_terms(processed_text, groupings)
+        if group_input:
+            processed_text = group_terms(processed_text, group_input)
+
 
         # Setting the background color based on the color profile
         bg_color = 'white' if 'white' in color_profile else 'black'
