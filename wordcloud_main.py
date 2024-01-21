@@ -49,7 +49,8 @@ color_profile = st.selectbox("Select Color Profile", list(color_profiles.keys())
 text_color, background_color = color_profiles[color_profile]
 
 # Stopword input
-new_stopwords = st.text_input("Enter words to exclude (separate with commas):").split(',')
+new_stopwords = [word.strip() for word in st.text_input("Enter words to exclude (separate with commas):").split(',')]
+
 
 # Generate word cloud button
 if st.button("Generate Word Cloud"):
