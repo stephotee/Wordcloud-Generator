@@ -25,16 +25,15 @@ def process_text(text, additional_stopwords):
 # Function to group common terms
 def group_terms(text, group_input):
     try:
-        # Regular expression to extract terms and replacement
-        match = re.match(r'GROUP=\((.*?)\) TO="(.+?)"', group_input)
-        if not match:
-            raise ValueError("Invalid input format")
-
-        group_terms = match.group(1).split(',')
-        to_term = match.group(2)
-
-        # Cleaning up terms
-        group_terms = [term.strip().strip('"') for term in group_terms]
+        # Splitting the input into two parts: 'GROUP' and 'TO'
+        group_part, to_part = group_input.split(' TO=')
+        
+        # Extracting terms from the 'GROUP' part
+        group_terms = group_part[len('GROUP=('):-1]  # Removing 'GROUP=(' and ')'
+        group_terms = [term.strip().strip('"') for term in group_terms.split(',')]
+        
+        # Extracting the replacement term from the 'TO' part
+        to_term = to_part.strip('"')
 
         # Replacing group terms with to_term
         for term in group_terms:
