@@ -12,7 +12,7 @@ def color_func(word, font_size, position, orientation, random_state=None, **kwar
     elif color_profile == "Multi-colour text, black background":
         colors = ["#FC993C", "#FFE775", "#BD4682", "#8C2057"]
     else:
-        colors = ["#000000"]
+        colors = ["#000000" if color_profile == "Black text, white background" else "#FFFFFF"]
     return np.random.choice(colors)
 
 # Function to process text and remove additional stopwords
@@ -78,7 +78,10 @@ if st.button('Generate Word Cloud'):
         if groupings:
             processed_text = group_terms(processed_text, groupings)
 
-        wordcloud = WordCloud(width=800, height=400, max_font_size=75, max_words=max_words, background_color=color_profile.split(",")[1], prefer_horizontal=1, color_func=color_func).generate(processed_text)
+        # Setting the background color based on the color profile
+        bg_color = 'white' if 'white' in color_profile else 'black'
+
+        wordcloud = WordCloud(width=800, height=400, max_font_size=75, max_words=max_words, background_color=bg_color, prefer_horizontal=1, color_func=color_func).generate(processed_text)
         
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")
