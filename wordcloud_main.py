@@ -22,26 +22,11 @@ def process_text(text, additional_stopwords):
         STOPWORDS.add(word.strip().lower())
     return " ".join([word for word in text.split() if word.lower() not in STOPWORDS])
 
-# Function to group common terms
-def group_terms(text, group_input):
-    try:
-        # Splitting the input into two parts: 'GROUP' and 'TO'
-        group_part, to_part = group_input.split(' TO=')
-        
-        # Extracting terms from the 'GROUP' part
-        group_terms = group_part[len('GROUP=('):-1]  # Removing 'GROUP=(' and ')'
-        group_terms = [term.strip().strip('"') for term in group_terms.split(',')]
-        
-        # Extracting the replacement term from the 'TO' part
-        to_term = to_part.strip('"')
-
-        # Replacing group terms with to_term
-        for term in group_terms:
-            text = text.replace(term, to_term)
-    except Exception as e:
-        st.error(f"Error in grouping syntax: {e}")
-        return text
-
+# Function to apply custom grouping
+def apply_custom_grouping(text, groupings):
+    for group_words, to_word in groupings.items():
+        for word in group_words:
+            text = text.replace(word, to_word)
     return text
 
 # Initialize session state
@@ -52,13 +37,29 @@ if 'color_profile' not in st.session_state:
 st.title('Word Cloud Generator')
 
 # Sidebar options
-color_profile = st.sidebar.selectbox('Choose Color Profile', 
-    ['Black text, white background', 'White text, black background', 
-    'Multi-colour text, white background', 'Multi-colour text, black background'], 
-    index=0)
-st.session_state['color_profile'] = color_profile
+st.sidebar.header("Options")
+text_input_method = st.sidebar.selectbox("Select input method", ["Type/Paste text", "Upload file"])
 
-max_words = st.sidebar.slider('Maximum Words', 5, 100, 50, 5)
+text = ""
+if text_input_method == "Type/Paste text":
+    text = st.sidebar.text_area("Enter text here:")
+elif text_input_method == "Upload file":
+    uploaded_file = st.sidebar.file_uploader("Upload your file", type=['txt', 'csv'])
+    if uploaded_file is not None:
+        # File processing logic
+
+additional_stopwords = st.sidebar.text_input("Additional stopwords (comma separated)")
+
+max_words = st.sidebar.slider("Max words", 5, 100, 5, step=5)
+
+# Custom word grouping interface
+groupings = {}
+if st.sidebar.button('Custom word grouping'):
+    group_num = len(groupings) + 1
+    group_words = st.sidebar.text_input(f"Words to be grouped {group_num}", key=f"group{group_num}")
+    to_word = st.sidebar.text_input(f"Replacement word {group_num}", key=f"to{group_num}")
+    if group_words and to_word:
+        groupings[group_words.split(',')] = to_word
 
 # Upload CSV or text input
 uploaded_file = st.file_uploader("Upload a CSV or a text file", type=['csv', 'txt'])
@@ -86,12 +87,11 @@ if group_input:
     except Exception as e:
         st.error(f"Error in grouping syntax: {e}")
 
-# Generating word cloud
+# Generate button
 if st.button('Generate Word Cloud'):
     if text:
         processed_text = process_text(text, additional_stopwords)
-        if group_input:
-            processed_text = group_terms(processed_text, group_input)
+        processed_text = apply_custom_grouping(processed_text, groupings)
 
         # Setting the background color based on the color profile
         bg_color = 'white' if 'white' in color_profile else 'black'
