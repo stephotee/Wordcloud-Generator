@@ -64,14 +64,14 @@ group_terms_input = st.text_area("Group common terms (e.g., GROUP=(\"battery\", 
 new_stopwords = [word.strip() for word in st.text_input("Enter words to exclude (separate with commas):").split(',')]
 
 # Generate word cloud button
-#if st.button("Generate Word Cloud"):
- #   if user_input:
-  #      generate_word_cloud(user_input, max_words, color_profile, text_color, background_color, new_stopwords)
-   # else:
-    #    st.error("Please enter some text to generate a word cloud.")
+if st.button("Generate Word Cloud"):
+    if user_input:
+        generate_word_cloud(user_input, max_words, color_profile, text_color, background_color, new_stopwords)
+    else:
+        st.error("Please enter some text to generate a word cloud.")
 
 # Generate button v2
-if st.button("Generate Word Cloud"):
-    group_mapping = parse_group_terms(group_terms_input)
-    processed_text, grouped_word_freq = apply_grouping(user_input, group_mapping)
-    generate_wordcloud(processed_text, grouped_word_freq, max_words, color_choice)
+#if st.button("Generate Word Cloud"):
+ #   group_mapping = parse_group_terms(group_terms_input)
+  #  processed_text, grouped_word_freq = apply_grouping(user_input, group_mapping)
+   # generate_wordcloud(processed_text, grouped_word_freq, max_words, color_choice)
