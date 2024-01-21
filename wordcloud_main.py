@@ -3,6 +3,28 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 import numpy as np
 import io
+import re
+from collections import Counter
+
+# Function to parse the group mapping input from the user
+def parse_group_terms(group_terms_str):
+    group_regex = r'GROUP=\((.*?)\) TO="(.+?)"'
+    groups = re.findall(group_regex, group_terms_str)
+    group_mapping = {}
+    for group in groups:
+        terms = group[0].replace('"', '').split(', ')
+        new_term = group[1]
+        for term in terms:
+            group_mapping[term] = new_term
+    return group_mapping
+
+# Function to apply the grouping of terms in the text
+def apply_grouping(text, group_mapping):
+    word_freq = Counter(text.split())
+    for old_term, new_term in group_mapping.items():
+        if old_term in word_freq:
+            word_freq[new_term] += word_freq.pop(old_term)
+    return ' '.join([word for word in text.split() if word not in group_mapping]), word_freq
 
 # Function to choose color for the words
 def color_func(word, font_size, position, orientation, random_state=None, **kwargs):
@@ -52,8 +74,14 @@ text_color, background_color = color_profiles[color_profile]
 new_stopwords = [word.strip() for word in st.text_input("Enter words to exclude (separate with commas):").split(',')]
 
 # Generate word cloud button
+#if st.button("Generate Word Cloud"):
+ #   if user_input:
+  #      generate_word_cloud(user_input, max_words, color_profile, text_color, background_color, new_stopwords)
+   # else:
+    #    st.error("Please enter some text to generate a word cloud.")
+
+# Generate button v2
 if st.button("Generate Word Cloud"):
-    if user_input:
-        generate_word_cloud(user_input, max_words, color_profile, text_color, background_color, new_stopwords)
-    else:
-        st.error("Please enter some text to generate a word cloud.")
+    group_mapping = parse_group_terms(group_terms_input)
+    processed_text, grouped_word_freq = apply_grouping(user_input, group_mapping)
+    generate_wordcloud(processed_text, grouped_word_freq, max_words, color_choice)
