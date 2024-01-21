@@ -66,7 +66,7 @@ st.title('Word Cloud Generator')
 
 # Sidebar controls
 st.sidebar.title("Controls")
-number_of_words = st.sidebar.slider('Number of words', 5, 100, 5, 5)
+number_of_words = st.sidebar.slider('Number of words', 5, 100, 5, 50)
 text_colour = st.sidebar.selectbox('Text colour', ['Black text', 'Colourful'])
 text_case = st.sidebar.selectbox('Text case', ['Upper case', 'Lower case'])
 additional_stop_words = st.sidebar.text_area('Additional stop words', '')
