@@ -2,7 +2,6 @@ import streamlit as st
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 import numpy as np
-import io
 import pandas as pd
 from collections import Counter
 
@@ -19,7 +18,7 @@ def color_func(word, font_size, position, orientation, random_state=None, **kwar
 # Function to process text and remove additional stopwords
 def process_text(text, additional_stopwords):
     for word in additional_stopwords:
-        STOPWORDS.add(word.lower())
+        STOPWORDS.add(word.strip().lower())
     return " ".join([word for word in text.split() if word.lower() not in STOPWORDS])
 
 # Function to group common terms
@@ -50,14 +49,12 @@ max_words = st.sidebar.slider('Maximum Words', 5, 100, 50, 5)
 uploaded_file = st.file_uploader("Upload a CSV or a text file", type=['csv', 'txt'])
 text_input = st.text_area("Or paste your text here")
 
-# Process uploaded file or text input
+text = ""
 if uploaded_file is not None:
     if uploaded_file.type == "text/csv":
-        # Read the CSV file
         df = pd.read_csv(uploaded_file)
         text = ' '.join(df.iloc[:, 0].dropna().astype(str))
     else:
-        # Read the text file
         text = str(uploaded_file.read(), 'utf-8')
 elif text_input:
     text = text_input
@@ -77,15 +74,12 @@ if group_input:
 # Generating word cloud
 if st.button('Generate Word Cloud'):
     if text:
-        # Process the text
         processed_text = process_text(text, additional_stopwords)
         if groupings:
             processed_text = group_terms(processed_text, groupings)
 
-        # Generate word cloud
         wordcloud = WordCloud(width=800, height=400, max_font_size=75, max_words=max_words, background_color=color_profile.split(",")[1], prefer_horizontal=1, color_func=color_func).generate(processed_text)
         
-        # Display word cloud
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")
         st.pyplot(plt)
