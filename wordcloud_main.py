@@ -1,24 +1,32 @@
 import streamlit as st
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
-from PIL import Image
 import numpy as np
-import base64
 import io
 
-# Function to convert color profile to corresponding colors
+# Function to choose color for the words
 def color_func(word, font_size, position, orientation, random_state=None, **kwargs):
-    if color_profile == "Profile 1":
-        return "#000000" # Black color
-    elif color_profile == "Profile 2":
+    if color_profile == "Multi-colour text, white background":
         colors = ["#0F1035", "#365486", "#7FC7D9", "#DCF2F1"]
-    elif color_profile == "Profile 3":
-        colors = ["#A94438", "#D24545", "#E6BAA3", "#E4DEBE"]
-    elif color_profile == "Profile 4":
-        colors = ["#4F6F52", "#739072", "#86A789", "#D2E3C8"]
-    elif color_profile == "Profile 5":
+    elif color_profile == "Multi-colour text, black background":
         colors = ["#FC993C", "#FFE775", "#BD4682", "#8C2057"]
+    else:
+        colors = [text_color]
+
     return np.random.choice(colors)
+
+# Function to generate and display word cloud
+def generate_word_cloud(text, max_words, color_profile, text_color, background_color, additional_stopwords):
+    wordcloud = WordCloud(width=800, height=400, max_words=max_words, 
+                          background_color=background_color,
+                          stopwords=STOPWORDS.union(set(additional_stopwords)),
+                          color_func=lambda *args, **kwargs: color_func(*args, **kwargs),
+                          prefer_horizontal=1.0).generate(text)
+
+    # Display image
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis("off")
+    st.pyplot()
 
 # Streamlit UI
 st.title("Word Cloud Generator")
@@ -27,29 +35,25 @@ st.title("Word Cloud Generator")
 user_input = st.text_area("Enter your text here:")
 
 # Word count slider
-max_words = st.slider("Max words in cloud", 1, 100, 50)
+max_words = st.slider("Max words in cloud", 5, 100, 50, 5)
 
 # Color profile selection
-color_profile = st.selectbox("Select Color Profile", 
-                             ["Profile 1", "Profile 2", "Profile 3", "Profile 4", "Profile 5"])
+color_profiles = {
+    "Black text, white background": ("#000000", "#FFFFFF"),
+    "White text, black background": ("#FFFFFF", "#000000"),
+    "Multi-colour text, white background": ("", "#FFFFFF"),
+    "Multi-colour text, black background": ("", "#000000")
+}
+
+color_profile = st.selectbox("Select Color Profile", list(color_profiles.keys()))
+text_color, background_color = color_profiles[color_profile]
+
+# Stopword input
+new_stopwords = st.text_input("Enter words to exclude (separate with commas):").split(',')
 
 # Generate word cloud button
 if st.button("Generate Word Cloud"):
     if user_input:
-        wordcloud = WordCloud(width=800, height=400, max_words=max_words, color_func=color_func, prefer_horizontal=1.0).generate(user_input)
-
-        # Display image
-        plt.imshow(wordcloud, interpolation='bilinear')
-        plt.axis("off")
-        st.set_option('deprecation.showPyplotGlobalUse', False)
-        st.pyplot()
-
-        # Convert to PNG
-        img_data = io.BytesIO()
-        wordcloud.to_image().save(img_data, format="PNG")
-        img_data.seek(0)
-
-        # Download link
-        btn = st.download_button(label="Download Image", data=img_data, file_name="wordcloud.png", mime="image/png")
+        generate_word_cloud(user_input, max_words, color_profile, text_color, background_color, new_stopwords)
     else:
         st.error("Please enter some text to generate a word cloud.")
