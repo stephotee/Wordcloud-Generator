@@ -3,6 +3,7 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import re
 from collections import Counter
 
 # Function to choose color for the words
@@ -24,14 +25,16 @@ def process_text(text, additional_stopwords):
 # Function to group common terms
 def group_terms(text, group_input):
     try:
-        # Splitting the input into GROUP and TO parts
-        group_part, to_part = group_input.split(' TO=')
-        group_terms = group_part.strip()[6:-1].split(',')
-        to_term = to_part.strip()[1:-1]
+        # Regular expression to extract terms and replacement
+        match = re.match(r'GROUP=\((.*?)\) TO="(.+?)"', group_input)
+        if not match:
+            raise ValueError("Invalid input format")
+
+        group_terms = match.group(1).split(',')
+        to_term = match.group(2)
 
         # Cleaning up terms
-        group_terms = [term.strip()[1:-1] for term in group_terms]
-        to_term = to_term.strip()
+        group_terms = [term.strip().strip('"') for term in group_terms]
 
         # Replacing group terms with to_term
         for term in group_terms:
@@ -90,7 +93,6 @@ if st.button('Generate Word Cloud'):
         processed_text = process_text(text, additional_stopwords)
         if group_input:
             processed_text = group_terms(processed_text, group_input)
-
 
         # Setting the background color based on the color profile
         bg_color = 'white' if 'white' in color_profile else 'black'
