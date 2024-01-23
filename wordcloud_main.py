@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 import io
 from PIL import Image
+import nltk
+nltk.download('stopwords')
+
 
 # Initialize NLTK stop words
 nltk_stopwords = stopwords.words('english')
