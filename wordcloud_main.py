@@ -5,32 +5,12 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import pandas as pd
 from io import StringIO
-from PIL import Image
-import io
-import numpy as np
 import nltk
 nltk.download('stopwords')
 nltk.download('punkt')
 
-
 # Initialize NLTK stop words
 nltk_stopwords = stopwords.words('english')
-
-# Function to save word cloud to a buffer
-def save_wordcloud(wordcloud):
-    img_buffer = io.BytesIO()
-    wordcloud.to_image().save(img_buffer, format='PNG')
-    img_buffer.seek(0)
-    return img_buffer
-
-# Download button logic
-def download_button(buffer, filename, button_text):
-    st.download_button(
-        label=button_text,
-        data=buffer,
-        file_name=filename,
-        mime='image/png'
-    )
 
 # Function to generate the word cloud
 def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme, text_case):
@@ -85,7 +65,7 @@ st.title('Word Cloud Generator')
 
 # Sidebar controls
 st.sidebar.title("Controls")
-number_of_words = st.sidebar.slider('Number of words', 5, 100, 50, 5)
+number_of_words = st.sidebar.slider('Number of words', 5, 100, 5, 5)
 text_colour = st.sidebar.selectbox('Text colour', ['Black text', 'Colourful'])
 text_case = st.sidebar.selectbox('Text case', ['Upper case', 'Lower case'])
 additional_stop_words = st.sidebar.text_area('Additional stop words', '')
@@ -105,28 +85,21 @@ else:
     text_data = st.text_area("Paste text here...")
 
 # Button to generate word cloud
-wordcloud_buffer = None  # Initialize buffer for word cloud
 if st.button('Generate Word Cloud'):
     color_scheme = get_color_scheme(text_colour)
-    wordcloud_obj = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
-    wordcloud_buffer = save_wordcloud(wordcloud_obj)  # Save to buffer for download
+    generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
 
 # Button to start over
 if st.button('Start Over'):
     st.experimental_rerun()
 
 # Save the current word cloud as a PNG
-#if st.button('Download PNG'):
-#    wordcloud.to_file('wordcloud.png')
-#    with open('wordcloud.png', 'rb') as file:
-#        btn = st.download_button(
-#           label="Download PNG",
-#            data=file,
-#            file_name="wordcloud.png",
-#            mime="image/png"
-#        )
-
-# Download button
-if wordcloud_buffer and st.button('Download PNG'):
-    download_button(wordcloud_buffer, 'wordcloud.png', 'Download Word Cloud as PNG')
-
+if st.button('Download PNG'):
+    wordcloud.to_file('wordcloud.png')
+    with open('wordcloud.png', 'rb') as file:
+        btn = st.download_button(
+            label="Download PNG",
+            data=file,
+            file_name="wordcloud.png",
+            mime="image/png"
+        )
