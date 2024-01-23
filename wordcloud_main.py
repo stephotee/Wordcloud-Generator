@@ -4,10 +4,9 @@ import matplotlib.pyplot as plt
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import pandas as pd
-from io import StringIO
-import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
+import numpy as np
+import io
+from PIL import Image
 
 # Initialize NLTK stop words
 nltk_stopwords = stopwords.words('english')
@@ -43,33 +42,34 @@ def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme,
         min_font_size=8, 
         max_words=max_words, 
         background_color='white',
-        color_func=lambda *args, **kwargs: color_scheme
+        color_func=color_scheme
     ).generate(' '.join(tokens))
-
-    # Display the word cloud
-    plt.figure(figsize=(10, 5))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis('off')
-    st.set_option('deprecation.showPyplotGlobalUse', False)
-    st.pyplot()
+    
+    return wordcloud
 
 # Function to handle color scheme
 def get_color_scheme(text_colour):
     if text_colour == 'Black text':
-        return 'black'
+        return lambda *args, **kwargs: 'black'
     elif text_colour == 'Colourful':
         return lambda *args, **kwargs: "hsl(%d, 100%%, 50%%)" % np.random.randint(0, 360)
+
+# Function to save word cloud to a buffer
+def save_wordcloud(wordcloud):
+    img_buffer = io.BytesIO()
+    wordcloud.to_image().save(img_buffer, format='PNG')
+    img_buffer.seek(0)
+    return img_buffer
 
 # Streamlit UI layout
 st.title('Word Cloud Generator')
 
 # Sidebar controls
 st.sidebar.title("Controls")
-number_of_words = st.sidebar.slider('Number of words', 5, 100, 50, 5)
+number_of_words = st.sidebar.slider('Number of words', 5, 100, 5, 5)
 text_colour = st.sidebar.selectbox('Text colour', ['Black text', 'Colourful'])
 text_case = st.sidebar.selectbox('Text case', ['Upper case', 'Lower case'])
 additional_stop_words = st.sidebar.text_area('Additional stop words', '')
-custom_groupings = {}
 
 # Upload file
 uploaded_file = st.file_uploader("Choose a text or CSV file", type=['txt', 'csv'])
@@ -79,27 +79,28 @@ if uploaded_file is not None:
         text_data = ' '.join(df[df.columns[0]].dropna().astype(str).tolist())
     else:
         text_data = uploaded_file.getvalue().decode("utf-8")
-
-# Text input
 else:
     text_data = st.text_area("Paste text here...")
 
-# Button to generate word cloud
+# Generate and show word cloud
+wordcloud_buffer = None  # Initialize buffer for word cloud
 if st.button('Generate Word Cloud'):
     color_scheme = get_color_scheme(text_colour)
-    generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
+    wordcloud_obj = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
+    wordcloud_buffer = save_wordcloud(wordcloud_obj)  # Save to buffer for download
+    plt.imshow(wordcloud_obj, interpolation='bilinear')
+    plt.axis('off')
+    st.pyplot()
 
-# Button to start over
+# Download button
+if wordcloud_buffer and st.button('Download PNG'):
+    st.download_button(
+        label='Download Word Cloud as PNG',
+        data=wordcloud_buffer,
+        file_name='wordcloud.png',
+        mime='image/png'
+    )
+
+# Reset button
 if st.button('Start Over'):
     st.experimental_rerun()
-
-# Save the current word cloud as a PNG
-if st.button('Download PNG'):
-    wordcloud.to_file('wordcloud.png')
-    with open('wordcloud.png', 'rb') as file:
-        btn = st.download_button(
-            label="Download PNG",
-            data=file,
-            file_name="wordcloud.png",
-            mime="image/png"
-        )
