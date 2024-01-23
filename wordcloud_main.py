@@ -1,109 +1,88 @@
 import streamlit as st
-from wordcloud import WordCloud
+from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 import pandas as pd
 import numpy as np
-import io
-from PIL import Image
-import nltk
+import base64
+from io import BytesIO
+import random
 
-nltk.download('stopwords')
+# Required for text processing in NLTK
+nltk.download('punkt')
 
-# Initialize NLTK stop words
-nltk_stopwords = stopwords.words('english')
+# Function to generate a color based on the "Colorful" option
+def random_color_func(word=None, font_size=None, position=None, orientation=None, font_path=None, random_state=None):
+    h = random_state.randint(0, 360)
+    s = random_state.randint(70, 100)
+    l = random_state.randint(40, 90)
+    return f"hsl({h}, {s}%, {l}%)"
 
-# Function to generate the word cloud
-def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme, text_case):
-    # Tokenize words
-    tokens = word_tokenize(text_data)
-    # Remove punctuation and make lower case
-    tokens = [word.lower() for word in tokens if word.isalpha()]
+# Function to generate word cloud
+def generate_word_cloud(text, max_words, color_scheme, text_case, additional_stop_words):
+    # Tokenization
+    tokens = word_tokenize(text)
+
+    # Stop words removal
+    stop_words = set(STOPWORDS).union(set(additional_stop_words))
+    tokens = [word for word in tokens if word.lower() not in stop_words]
     
-    # Apply text case
-    if text_case == 'Upper case':
-        tokens = [word.upper() for word in tokens]
-    elif text_case == 'Lower case':
-        tokens = [word.lower() for word in tokens]
-
-    # Add additional stop words if any
-    if additional_stopwords:
-        additional_stopwords = [word.strip().lower() for word in additional_stopwords.split(',')]
-        all_stopwords = nltk_stopwords + additional_stopwords
-    else:
-        all_stopwords = nltk_stopwords
-
-    # Remove stop words
-    tokens = [word for word in tokens if not word in all_stopwords]
+    # Text case conversion
+    tokens = [word.upper() if text_case == 'Upper case' else word.lower() for word in tokens]
 
     # Generate word cloud
     wordcloud = WordCloud(
-        width=800, 
+        width=800,
         height=400,
-        max_font_size=60, 
-        min_font_size=8, 
-        max_words=max_words, 
-        background_color='white',
-        color_func=color_scheme
+        max_words=max_words,
+        color_func=random_color_func if color_scheme == 'Colorful' else lambda *args, **kwargs: "black",
+        background_color='white'
     ).generate(' '.join(tokens))
+
+    # Display the generated image:
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis("off")
     
-    return wordcloud
+    # Save the plot to a BytesIO object to display and download
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    st.image(buf)
+    
+    # Return the buffer to use for the download link
+    return buf
 
-# Function to handle color scheme
-def get_color_scheme(text_colour):
-    if text_colour == 'Black text':
-        return lambda *args, **kwargs: 'black'
-    elif text_colour == 'Colourful':
-        return lambda *args, **kwargs: "hsl(%d, 100%%, 50%%)" % np.random.randint(0, 360)
-
-# Function to save word cloud to a buffer
-def save_wordcloud(wordcloud):
-    img_buffer = io.BytesIO()
-    wordcloud.to_image().save(img_buffer, format='PNG')
-    img_buffer.seek(0)
-    return img_buffer
-
-# Streamlit UI layout
+# Streamlit app layout
 st.title('Word Cloud Generator')
 
-# Sidebar controls
-st.sidebar.title("Controls")
-number_of_words = st.sidebar.slider('Number of words', 5, 100, 50, 5)
-text_colour = st.sidebar.selectbox('Text colour', ['Black text', 'Colourful'])
-text_case = st.sidebar.selectbox('Text case', ['Upper case', 'Lower case'])
-additional_stop_words = st.sidebar.text_area('Additional stop words', '')
+# Text input
+text_input = st.text_area("Paste text here (use commas to separate words or phrases)")
 
-# Upload file
-uploaded_file = st.file_uploader("Choose a text or CSV file", type=['txt', 'csv'])
+# File upload
+uploaded_file = st.file_uploader("Or upload your data (.csv or .txt)", type=['csv', 'txt'])
+
+# Process uploaded file
 if uploaded_file is not None:
     if uploaded_file.type == "text/csv":
         df = pd.read_csv(uploaded_file)
-        text_data = ' '.join(df[df.columns[0]].dropna().astype(str).tolist())
-    else:
-        text_data = uploaded_file.getvalue().decode("utf-8")
-else:
-    text_data = st.text_area("Paste text here...")
+        text_input = ' '.join(df.iloc[:, 0].astype(str).tolist())
+    elif uploaded_file.type == "text/plain":
+        text_input = uploaded_file.read().decode('utf-8')
 
-# Generate and show word cloud
-wordcloud_buffer = None  # Initialize buffer for word cloud
+# Sidebar for additional controls
+max_words = st.sidebar.slider("Number of words", 5, 100, 50, 5)
+color_scheme = st.sidebar.selectbox("Text color", options=['black', 'Colorful'])
+text_case = st.sidebar.radio("Text case", ('Upper case', 'Lower case'))
+additional_stop_words = st.sidebar.text_input("Additional stop words", value='').split(',')
+
+# Button to generate word cloud
 if st.button('Generate Word Cloud'):
-    color_scheme = get_color_scheme(text_colour)
-    wordcloud_obj = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
-    wordcloud_buffer = save_wordcloud(wordcloud_obj)  # Save to buffer for download
-    plt.imshow(wordcloud_obj, interpolation='bilinear')
-    plt.axis('off')
-    st.pyplot()
-
-# Download button
-if wordcloud_buffer and st.button('Download PNG'):
-    st.download_button(
-        label='Download Word Cloud as PNG',
-        data=wordcloud_buffer,
-        file_name='wordcloud.png',
-        mime='image/png'
+    buf = generate_word_cloud(text_input, max_words, color_scheme, text_case, additional_stop_words)
+    # Create a download link for the generated word cloud
+    st.sidebar.download_button(
+        label="Download PNG",
+        data=buf,
+        file_name="wordcloud.png",
+        mime="image/png"
     )
-
-# Reset button
-if st.button('Start Over'):
-    st.experimental_rerun()
