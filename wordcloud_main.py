@@ -7,21 +7,12 @@ import pandas as pd
 import numpy as np
 import io
 from PIL import Image
-
-# Download necessary NLTK resources
 import nltk
-nltk.download('punkt')
+
 nltk.download('stopwords')
 
 # Initialize NLTK stop words
 nltk_stopwords = stopwords.words('english')
-
-# Function to handle color scheme
-def get_color_scheme(text_colour):
-    if text_colour == 'Black text':
-        return lambda *args, **kwargs: 'black'
-    elif text_colour == 'Colourful':
-        return lambda *args, **kwargs: "hsl(%d, 100%%, 50%%)" % np.random.randint(0, 360)
 
 # Function to generate the word cloud
 def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme, text_case):
@@ -57,11 +48,14 @@ def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme,
         color_func=color_scheme
     ).generate(' '.join(tokens))
     
-    # Create a figure and axis using plt.subplots()
-    fig, ax = plt.subplots()
-    ax.imshow(wordcloud, interpolation='bilinear')
-    ax.axis('off')
-    return fig
+    return wordcloud
+
+# Function to handle color scheme
+def get_color_scheme(text_colour):
+    if text_colour == 'Black text':
+        return lambda *args, **kwargs: 'black'
+    elif text_colour == 'Colourful':
+        return lambda *args, **kwargs: "hsl(%d, 100%%, 50%%)" % np.random.randint(0, 360)
 
 # Function to save word cloud to a buffer
 def save_wordcloud(wordcloud):
@@ -95,9 +89,11 @@ else:
 wordcloud_buffer = None  # Initialize buffer for word cloud
 if st.button('Generate Word Cloud'):
     color_scheme = get_color_scheme(text_colour)
-    fig = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
-    wordcloud_buffer = save_wordcloud(fig)  # Save to buffer for download
-    st.pyplot(fig)
+    wordcloud_obj = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
+    wordcloud_buffer = save_wordcloud(wordcloud_obj)  # Save to buffer for download
+    plt.imshow(wordcloud_obj, interpolation='bilinear')
+    plt.axis('off')
+    st.pyplot()
 
 # Download button
 if wordcloud_buffer and st.button('Download PNG'):
