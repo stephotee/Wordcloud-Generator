@@ -7,16 +7,21 @@ import pandas as pd
 import numpy as np
 import io
 from PIL import Image
-import nltk
+
 # Download necessary NLTK resources
+import nltk
 nltk.download('punkt')
 nltk.download('stopwords')
 
-
-
-
 # Initialize NLTK stop words
 nltk_stopwords = stopwords.words('english')
+
+# Function to handle color scheme
+def get_color_scheme(text_colour):
+    if text_colour == 'Black text':
+        return lambda *args, **kwargs: 'black'
+    elif text_colour == 'Colourful':
+        return lambda *args, **kwargs: "hsl(%d, 100%%, 50%%)" % np.random.randint(0, 360)
 
 # Function to generate the word cloud
 def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme, text_case):
@@ -52,14 +57,11 @@ def generate_wordcloud(text_data, additional_stopwords, max_words, color_scheme,
         color_func=color_scheme
     ).generate(' '.join(tokens))
     
-    return wordcloud
-
-# Function to handle color scheme
-def get_color_scheme(text_colour):
-    if text_colour == 'Black text':
-        return lambda *args, **kwargs: 'black'
-    elif text_colour == 'Colourful':
-        return lambda *args, **kwargs: "hsl(%d, 100%%, 50%%)" % np.random.randint(0, 360)
+    # Create a figure and axis using plt.subplots()
+    fig, ax = plt.subplots()
+    ax.imshow(wordcloud, interpolation='bilinear')
+    ax.axis('off')
+    return fig
 
 # Function to save word cloud to a buffer
 def save_wordcloud(wordcloud):
@@ -73,7 +75,7 @@ st.title('Word Cloud Generator')
 
 # Sidebar controls
 st.sidebar.title("Controls")
-number_of_words = st.sidebar.slider('Number of words', 5, 100, 50, 5)
+number_of_words = st.sidebar.slider('Number of words', 5, 100, 5, 5)
 text_colour = st.sidebar.selectbox('Text colour', ['Black text', 'Colourful'])
 text_case = st.sidebar.selectbox('Text case', ['Upper case', 'Lower case'])
 additional_stop_words = st.sidebar.text_area('Additional stop words', '')
@@ -93,11 +95,9 @@ else:
 wordcloud_buffer = None  # Initialize buffer for word cloud
 if st.button('Generate Word Cloud'):
     color_scheme = get_color_scheme(text_colour)
-    wordcloud_obj = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
-    wordcloud_buffer = save_wordcloud(wordcloud_obj)  # Save to buffer for download
-    plt.imshow(wordcloud_obj, interpolation='bilinear')
-    plt.axis('off')
-    st.pyplot()
+    fig = generate_wordcloud(text_data, additional_stop_words, number_of_words, color_scheme, text_case)
+    wordcloud_buffer = save_wordcloud(fig)  # Save to buffer for download
+    st.pyplot(fig)
 
 # Download button
 if wordcloud_buffer and st.button('Download PNG'):
