@@ -8,7 +8,11 @@ import numpy as np
 import io
 from PIL import Image
 import nltk
+# Download necessary NLTK resources
+nltk.download('punkt')
 nltk.download('stopwords')
+
+
 
 
 # Initialize NLTK stop words
